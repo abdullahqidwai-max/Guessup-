@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guess Up</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0f;--card:#13131f;--ac:#f5c842;--ac2:#ff5e62;--ac3:#43e8a0;--tx:#f0f0f0;--mu:#888;--br:#2a2a3a}
+*{box-sizing:border-box;margin:0;padding:0}
+
+/* ── BODY & BACKGROUND ── */
+body{background:var(--bg);color:var(--tx);font-family:'Nunito',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow-y:auto;overflow-x:hidden;padding:16px;position:relative}
+
+/* Animated particle canvas */
+#bgCanvas{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;opacity:.55}
+
+/* Moving gradient orbs */
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 20% 30%,rgba(245,200,66,.07),transparent 55%),radial-gradient(ellipse at 80% 70%,rgba(255,94,98,.06),transparent 55%),radial-gradient(ellipse at 50% 50%,rgba(67,232,160,.04),transparent 60%);pointer-events:none;z-index:0;animation:orbMove 12s ease-in-out infinite alternate}
+@keyframes orbMove{0%{opacity:.7;transform:scale(1)}100%{opacity:1;transform:scale(1.06)}}
+
+/* ── SCREENS ── */
+.screen{display:none;width:100%;max-width:680px;padding:20px 20px 60px;position:relative;z-index:1}
+.screen.active{display:flex;flex-direction:column;align-items:center}
+
+/* Slide transitions */
+.screen.slide-in{animation:slideIn .35s cubic-bezier(.4,0,.2,1) forwards}
+.screen.slide-out{animation:slideOut .25s cubic-bezier(.4,0,.2,1) forwards}
+@keyframes slideIn{from{opacity:0;transform:translateY(22px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes slideOut{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(-14px)}}
+
+/* ── LOGO ── */
+h1.logo{font-family:'Bebas Neue',sans-serif;font-size:clamp(56px,12vw,108px);letter-spacing:4px;background:linear-gradient(135deg,var(--ac),var(--ac2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;text-align:center;margin-bottom:4px}
+.sub{color:var(--mu);font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:32px;text-align:center}
+
+/* ── GLASSMORPHISM CARDS ── */
+.card{background:rgba(19,19,31,.75);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.07);border-radius:20px;padding:24px;width:100%;max-width:460px;margin-bottom:14px;box-shadow:0 8px 32px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.05)}
+.card h2{font-size:17px;font-weight:900;color:var(--ac);margin-bottom:14px}
+
+/* ── INPUTS ── */
+.ti{width:100%;background:rgba(10,10,15,.8);border:2px solid var(--br);border-radius:11px;padding:11px 14px;color:var(--tx);font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;outline:none;transition:border-color .2s,box-shadow .2s;margin-bottom:10px}
+.ti:focus{border-color:var(--ac);box-shadow:0 0 0 3px rgba(245,200,66,.12)}
+.ti::placeholder{color:var(--mu)}
+.code-ti{text-transform:uppercase;letter-spacing:6px;font-size:20px;text-align:center}
+
+/* ── BUTTONS ── */
+.btn{padding:13px 30px;border-radius:50px;border:none;font-family:'Nunito',sans-serif;font-size:15px;font-weight:900;cursor:pointer;transition:all .18s;letter-spacing:1px;position:relative;overflow:hidden}
+.btn::after{content:'';position:absolute;inset:0;background:rgba(255,255,255,.08);opacity:0;transition:opacity .15s}
+.btn:active::after{opacity:1}
+.btn-p{background:linear-gradient(135deg,var(--ac),#e6a800);color:#000;box-shadow:0 4px 18px rgba(245,200,66,.3)}
+.btn-p:hover{transform:scale(1.05) translateY(-1px);box-shadow:0 8px 28px rgba(245,200,66,.45)}
+.btn-p:active{transform:scale(.97)}
+.btn-p:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-ok{background:linear-gradient(135deg,var(--ac3),#22c474);color:#000;font-size:20px;padding:18px 48px;box-shadow:0 4px 18px rgba(67,232,160,.3)}
+.btn-ok:hover{transform:scale(1.05) translateY(-1px);box-shadow:0 8px 28px rgba(67,232,160,.45)}
+.btn-ok:active{animation:btnBounce .25s ease}
+.btn-no{background:linear-gradient(135deg,var(--ac2),#c0392b);color:#fff;font-size:20px;padding:18px 48px;box-shadow:0 4px 18px rgba(255,94,98,.3)}
+.btn-no:hover{transform:scale(1.05) translateY(-1px);box-shadow:0 8px 28px rgba(255,94,98,.45)}
+.btn-no:active{animation:btnShake .25s ease}
+@keyframes btnBounce{0%{transform:scale(1)}40%{transform:scale(.92)}70%{transform:scale(1.06)}100%{transform:scale(1)}}
+@keyframes btnShake{0%{transform:translateX(0)}25%{transform:translateX(-6px)}50%{transform:translateX(6px)}75%{transform:translateX(-4px)}100%{transform:translateX(0)}}
+
+/* ── EMOJI PICKER ── */
+.emoji-row{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
+.emo-opt{font-size:20px;width:38px;height:38px;border-radius:9px;border:2px solid var(--br);background:rgba(10,10,15,.6);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;user-select:none}
+.emo-opt.sel{border-color:var(--ac);background:rgba(245,200,66,.15);transform:scale(1.18);box-shadow:0 0 12px rgba(245,200,66,.3)}
+
+/* ── LOBBY ── */
+.code-big{font-family:'Bebas Neue',sans-serif;font-size:68px;letter-spacing:12px;color:var(--ac);text-align:center;line-height:1;text-shadow:0 0 30px rgba(245,200,66,.4)}
+.code-lbl{color:var(--mu);font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;text-align:center;margin-bottom:6px}
+.player-lobby{display:flex;align-items:center;gap:10px;background:rgba(10,10,15,.5);border:1px solid rgba(255,255,255,.06);border-radius:11px;padding:9px 14px;font-weight:800;font-size:14px;margin-bottom:7px;backdrop-filter:blur(8px)}
+.host-tag{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:1px;background:var(--ac);color:#000;border-radius:5px;padding:2px 7px;margin-left:auto}
+.cat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.cat-chip{padding:9px 12px;border-radius:10px;border:2px solid var(--br);background:rgba(10,10,15,.5);color:var(--mu);font-family:'Nunito',sans-serif;font-size:12px;font-weight:800;cursor:pointer;transition:all .2s;text-align:center;user-select:none}
+.cat-chip.sel{border-color:var(--ac);background:rgba(245,200,66,.1);color:var(--ac);box-shadow:0 0 10px rgba(245,200,66,.15)}
+.cat-chip:hover:not(.sel){border-color:var(--mu);color:var(--tx)}
+
+/* ── DOTS ANIMATION ── */
+.dots::after{content:'';animation:dotanim 1.2s steps(4,end) infinite}
+@keyframes dotanim{0%,20%{content:''}40%{content:'.'}60%{content:'..'}80%,100%{content:'...'}}
+
+/* ── PLAY SCREENS ── */
+.play-top{display:flex;justify-content:space-between;align-items:center;width:100%;margin-bottom:14px}
+.play-name{font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--ac);letter-spacing:2px}
+
+/* SVG timer ring */
+.timer-wrap{position:relative;width:78px;height:78px;flex-shrink:0}
+.timer-wrap svg{position:absolute;top:0;left:0;transform:rotate(-90deg)}
+.timer-track{fill:none;stroke:var(--br);stroke-width:5}
+.timer-prog{fill:none;stroke:var(--ac3);stroke-width:5;stroke-linecap:round;transition:stroke-dashoffset 1s linear,stroke .5s}
+.timer-inner{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;background:rgba(19,19,31,.85);border-radius:50%;backdrop-filter:blur(8px)}
+.timer-n{font-family:'Bebas Neue',sans-serif;font-size:28px;line-height:1;transition:color .5s}
+.timer-l{font-size:8px;color:var(--mu);letter-spacing:1px;text-transform:uppercase}
+
+.score-box{background:rgba(19,19,31,.75);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.07);border-radius:11px;padding:7px 16px;font-size:13px;font-weight:800}
+.score-box span{color:var(--ac3);font-size:18px}
+
+/* ── WORD CARD ── */
+.word-area{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;min-height:180px}
+.word-card{background:rgba(19,19,31,.85);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.08);border-radius:24px;padding:32px 40px;box-shadow:0 16px 48px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.06);min-width:280px;max-width:560px;animation:cardFlipIn .4s cubic-bezier(.34,1.56,.64,1)}
+@keyframes cardFlipIn{from{transform:perspective(600px) rotateX(25deg) scale(.9);opacity:0}to{transform:perspective(600px) rotateX(0) scale(1);opacity:1}}
+.word-cat{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:var(--mu);margin-bottom:14px}
+.word-big{font-family:'Bebas Neue',sans-serif;font-size:clamp(34px,7vw,68px);letter-spacing:3px;color:var(--tx);line-height:1.1}
+
+/* Word transition animations */
+@keyframes wFlyUp{0%{transform:translateY(0);opacity:1}100%{transform:translateY(-60px);opacity:0}}
+@keyframes wFlyLeft{0%{transform:translateX(0);opacity:1}100%{transform:translateX(-80px);opacity:0}}
+@keyframes wDropIn{0%{transform:translateY(40px);opacity:0}100%{transform:translateY(0);opacity:1}}
+.w-exit-up{animation:wFlyUp .2s ease forwards}
+.w-exit-left{animation:wFlyLeft .2s ease forwards}
+.w-enter{animation:wDropIn .25s cubic-bezier(.34,1.56,.64,1) forwards}
+
+/* ── SPEC BANNER ── */
+.spec-banner{background:rgba(245,200,66,.08);backdrop-filter:blur(10px);border:1px solid rgba(245,200,66,.25);border-radius:12px;padding:9px 18px;margin-bottom:14px;font-size:12px;font-weight:800;color:var(--ac);text-align:center;width:100%;max-width:680px}
+.play-btns{display:flex;gap:14px;padding-bottom:20px}
+
+/* ── SCREEN FLASH ── */
+#flashOverlay{position:fixed;inset:0;pointer-events:none;z-index:998;opacity:0;background:rgba(255,50,50,.18)}
+#flashOverlay.flash{animation:flashAnim .15s ease-out forwards}
+@keyframes flashAnim{0%{opacity:1}100%{opacity:0}}
+
+/* ── COUNTDOWN OVERLAY ── */
+#countdownOverlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:1000;pointer-events:none;background:rgba(10,10,15,.85);opacity:0}
+#countdownOverlay.active{pointer-events:all}
+.countdown-num{font-family:'Bebas Neue',sans-serif;font-size:160px;color:var(--ac);line-height:1;animation:countPulse .7s cubic-bezier(.34,1.56,.64,1)}
+.countdown-go{font-family:'Bebas Neue',sans-serif;font-size:100px;background:linear-gradient(135deg,var(--ac),var(--ac3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:countPulse .5s cubic-bezier(.34,1.56,.64,1)}
+@keyframes countPulse{from{transform:scale(2.5);opacity:0}to{transform:scale(1);opacity:1}}
+
+/* ── RECAP ── */
+.recap-list{width:100%;max-width:500px;display:flex;flex-direction:column;gap:7px;margin-bottom:22px;max-height:52vh;overflow-y:auto}
+.recap-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:11px;font-size:14px;font-weight:800;border:1px solid transparent;backdrop-filter:blur(8px)}
+.recap-row.got{background:rgba(67,232,160,.08);border-color:rgba(67,232,160,.25);color:var(--ac3)}
+.recap-row.skp{background:rgba(255,94,98,.08);border-color:rgba(255,94,98,.2);color:#ff8a8d}
+.recap-cat{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;opacity:.6}
+.recap-stats{display:flex;gap:12px;margin-bottom:18px}
+.rstat{background:rgba(19,19,31,.75);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.07);border-radius:11px;padding:11px 18px;text-align:center;min-width:88px}
+.rstat .n{font-family:'Bebas Neue',sans-serif;font-size:34px;line-height:1}
+.rstat.g .n{color:var(--ac3)}.rstat.r .n{color:var(--ac2)}
+.rstat .l{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--mu);margin-top:2px}
+
+/* ── LEADERBOARD ── */
+.lb-item{display:flex;align-items:center;gap:12px;background:rgba(19,19,31,.75);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.06);border-radius:13px;padding:12px 16px;margin-bottom:8px;transition:transform .3s}
+.lb-item.win{border-color:rgba(245,200,66,.4);background:rgba(245,200,66,.06);box-shadow:0 0 20px rgba(245,200,66,.1)}
+.lb-rank{font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--mu);width:30px;text-align:center}
+.lb-item.win .lb-rank{color:var(--ac)}
+.lb-name{flex:1;font-size:16px;font-weight:800}
+.lb-pts{font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--ac3)}
+.you-tag{font-size:9px;background:var(--ac);color:#000;border-radius:5px;padding:2px 6px;font-weight:900;letter-spacing:1px;margin-left:4px}
+.turn-item{display:flex;align-items:center;gap:9px;background:rgba(10,10,15,.5);border:1px solid rgba(255,255,255,.05);border-radius:9px;padding:8px 13px;font-size:13px;font-weight:800;margin-bottom:6px;backdrop-filter:blur(8px)}
+.turn-item.cur{border-color:rgba(245,200,66,.5);color:var(--ac);background:rgba(245,200,66,.05)}
+.err{color:var(--ac2);font-size:12px;font-weight:700;margin-top:6px}
+#confettiCanvas{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:999}
+.sp{display:inline-block;width:10px;height:10px;border:2px solid var(--br);border-top-color:var(--ac);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:4px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── BACK BUTTON ── */
+.back-btn{position:fixed;top:16px;left:16px;z-index:200;background:rgba(19,19,31,.85);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.08);border-radius:50px;padding:8px 16px;color:var(--mu);font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .2s}
+.back-btn:hover{color:var(--tx);border-color:rgba(255,255,255,.2);transform:translateX(-2px)}
+.back-btn.hidden{display:none!important}
+
+/* ── ROUND SUMMARY OVERLAY ── */
+#roundSummary{position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;background:rgba(10,10,15,.92);backdrop-filter:blur(16px);opacity:0;pointer-events:none;transition:opacity .3s}
+#roundSummary.show{opacity:1;pointer-events:all}
+.rs-box{background:rgba(19,19,31,.9);border:1px solid rgba(255,255,255,.08);border-radius:24px;padding:32px;max-width:400px;width:90%;box-shadow:0 24px 64px rgba(0,0,0,.6);text-align:center;animation:rsSlide .4s cubic-bezier(.34,1.56,.64,1)}
+@keyframes rsSlide{from{transform:scale(.85) translateY(20px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+.rs-title{font-family:'Bebas Neue',sans-serif;font-size:38px;color:var(--ac);letter-spacing:3px;margin-bottom:4px}
+.rs-sub{color:var(--mu);font-size:13px;font-weight:700;margin-bottom:20px}
+.rs-row{display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:11px;background:rgba(10,10,15,.5);border:1px solid rgba(255,255,255,.05);margin-bottom:7px;animation:rsRowIn .3s ease both}
+@keyframes rsRowIn{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:translateX(0)}}
+.rs-rank{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--mu);width:26px;text-align:center}
+.rs-name{flex:1;font-size:14px;font-weight:800;text-align:left}
+.rs-pts{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--ac3)}
+.rs-delta{font-size:11px;font-weight:800;color:var(--ac);margin-left:4px}
+.rs-you{font-size:9px;background:var(--ac);color:#000;border-radius:4px;padding:1px 5px;font-weight:900;margin-left:4px}
+
+/* ── CATEGORY COLORS ── */
+.word-card[data-cat="Movies"]          { border-color:rgba(250,128,114,.35); }
+.word-card[data-cat="Movies"] .word-cat { color:#fa8072; }
+.word-card[data-cat="TV Shows"]        { border-color:rgba(147,112,219,.35); }
+.word-card[data-cat="TV Shows"] .word-cat { color:#9370db; }
+.word-card[data-cat="Famous People"]   { border-color:rgba(255,215,0,.35); }
+.word-card[data-cat="Famous People"] .word-cat { color:#ffd700; }
+.word-card[data-cat="Brands"]          { border-color:rgba(30,144,255,.35); }
+.word-card[data-cat="Brands"] .word-cat { color:#1e90ff; }
+.word-card[data-cat="Famous Places"]   { border-color:rgba(60,179,113,.35); }
+.word-card[data-cat="Famous Places"] .word-cat { color:#3cb371; }
+.word-card[data-cat="Islam"]           { border-color:rgba(32,178,170,.35); }
+.word-card[data-cat="Islam"] .word-cat { color:#20b2aa; }
+.word-card[data-cat="Anime"]           { border-color:rgba(255,105,180,.35); }
+.word-card[data-cat="Anime"] .word-cat { color:#ff69b4; }
+.word-card[data-cat="NFL"]             { border-color:rgba(255,140,0,.35); }
+.word-card[data-cat="NFL"] .word-cat   { color:#ff8c00; }
+.word-card[data-cat="NBA"]             { border-color:rgba(255,69,0,.35); }
+.word-card[data-cat="NBA"] .word-cat   { color:#ff4500; }
+.word-card[data-cat="Soccer"]          { border-color:rgba(67,232,160,.35); }
+.word-card[data-cat="Soccer"] .word-cat { color:#43e8a0; }
+.word-card[data-cat="Comic/Manga Characters"] { border-color:rgba(138,43,226,.35); }
+.word-card[data-cat="Comic/Manga Characters"] .word-cat { color:#8a2be2; }
+
+/* ── LIVE SCOREBOARD STRIP ── */
+#liveStrip{width:100%;max-width:680px;display:none;gap:6px;flex-wrap:wrap;justify-content:center;margin-bottom:10px;z-index:1}
+#liveStrip.show{display:flex}
+.ls-pill{display:flex;align-items:center;gap:5px;background:rgba(19,19,31,.8);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.07);border-radius:50px;padding:5px 12px;font-size:12px;font-weight:800;transition:all .3s}
+.ls-pill.ls-lead{border-color:rgba(245,200,66,.4);background:rgba(245,200,66,.08)}
+.ls-pill .ls-avatar{font-size:15px}
+.ls-pill .ls-name{max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mu)}
+.ls-pill.ls-lead .ls-name{color:var(--ac)}
+.ls-pill .ls-pts{font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--ac3);margin-left:2px}
+.ls-pill .ls-roundpts{font-size:10px;font-weight:900;color:var(--ac);background:rgba(245,200,66,.15);border-radius:10px;padding:1px 6px;margin-left:2px}
+
+/* ── WINNER CROWN ── */
+.crown-wrap{text-align:center;margin-bottom:8px;position:relative}
+.crown-emoji{font-size:64px;display:inline-block;animation:crownDrop .8s cubic-bezier(.34,1.56,.64,1) forwards;opacity:0}
+@keyframes crownDrop{0%{transform:translateY(-80px) scale(.5) rotate(-20deg);opacity:0}60%{transform:translateY(8px) scale(1.15) rotate(5deg);opacity:1}80%{transform:translateY(-4px) scale(.95) rotate(-2deg)}100%{transform:translateY(0) scale(1) rotate(0);opacity:1}}
+.winner-name{font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--ac);letter-spacing:3px;animation:fadeIn .6s .5s ease both}
+.winner-pts{color:var(--mu);font-size:13px;font-weight:700;animation:fadeIn .6s .7s ease both}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.lb-item{animation:lbSlideIn .4s ease both}
+@keyframes lbSlideIn{from{opacity:0;transform:translateX(-16px)}to{opacity:1;transform:translateX(0)}}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:3px}
+</style>
+</head>
+<body>
+<canvas id="confettiCanvas"></canvas>
+<button class="back-btn hidden" id="backBtn" onclick="leaveGame()">← Leave</button>
+<div id="roundSummary">
+  <div class="rs-box">
+    <div class="rs-title">ROUND OVER</div>
+    <div class="rs-sub" id="rsSub"></div>
+    <div id="rsRows"></div>
+  </div>
+</div>
+<canvas id="bgCanvas"></canvas>
+<div id="flashOverlay"></div>
+<div id="countdownOverlay"><div id="countdownText" class="countdown-num">3</div></div>
+
+<!-- LANDING -->
+<div id="sLand" class="screen active">
+  <h1 class="logo">GUESS UP</h1>
+  <p class="sub">Multiplayer · Real Time</p>
+  <div class="card">
+    <h2>👤 Your Name & Avatar</h2>
+    <input class="ti" id="myName" placeholder="Enter your name" maxlength="16">
+    <div class="emoji-row" id="avatarPicker"></div>
+  </div>
+  <div class="card" style="display:flex;flex-direction:column;gap:11px;">
+    <button class="btn btn-p" onclick="hostGame()" style="width:100%;font-size:17px;padding:15px;">🏠 HOST A GAME</button>
+    <div style="text-align:center;color:var(--mu);font-size:11px;font-weight:700;">— OR —</div>
+    <div style="display:flex;gap:9px;">
+      <input class="ti code-ti" id="joinCode" placeholder="CODE" maxlength="4" style="margin-bottom:0;flex:1;">
+      <button class="btn btn-p" onclick="joinGame()" style="padding:11px 22px;font-size:14px;">JOIN</button>
+    </div>
+    <p class="err" id="landErr"></p>
+  </div>
+</div>
+
+<!-- LOBBY HOST -->
+<div id="sLobby" class="screen">
+  <h1 class="logo" style="font-size:clamp(38px,9vw,76px);margin-bottom:4px;">LOBBY</h1>
+  <div class="card" style="text-align:center;">
+    <div class="code-lbl">Share this code with friends</div>
+    <div class="code-big" id="lobbyCode">----</div>
+    <div style="color:var(--mu);font-size:12px;font-weight:600;margin-top:4px;">Everyone opens this same page → Join → type the code</div>
+  </div>
+  <div class="card">
+    <h2>👥 Players <span id="lobbyCount" style="color:var(--mu);font-size:13px;"></span></h2>
+    <div id="lobbyPlayers"></div>
+    <p style="color:var(--mu);font-size:12px;font-weight:600;" class="dots">Waiting for players</p>
+  </div>
+  <div class="card">
+    <h2>🎯 Categories</h2>
+    <div class="cat-grid" id="lobbyCats"></div>
+    <p class="err" id="lobbyCatErr"></p>
+  </div>
+  <button class="btn btn-p" onclick="startGame()" style="font-size:17px;padding:15px 44px;">START GAME →</button>
+  <p class="err" id="lobbyErr" style="margin-top:8px;"></p>
+  <button onclick="leaveGameNoConfirm()" style="margin-top:10px;background:none;border:none;color:var(--mu);font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;cursor:pointer;text-decoration:underline;">← Leave Lobby</button>
+</div>
+
+<!-- WAITING GUEST -->
+<div id="sWait" class="screen">
+  <h1 class="logo" style="font-size:clamp(38px,9vw,76px);">GUESS UP</h1>
+  <div class="card" style="text-align:center;">
+    <div class="code-lbl">You're in! Game code:</div>
+    <div class="code-big" id="waitCode">----</div>
+    <p style="color:var(--mu);font-size:13px;font-weight:600;margin-top:8px;"><span class="sp"></span>Waiting for host to start<span class="dots"></span></p>
+  </div>
+  <div class="card">
+    <h2>👥 Players</h2>
+    <div id="waitPlayers"></div>
+  </div>
+  <button onclick="leaveGameNoConfirm()" style="margin-top:4px;background:none;border:none;color:var(--mu);font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;cursor:pointer;text-decoration:underline;">← Wrong code? Leave</button>
+</div>
+
+<!-- TURN ORDER -->
+<div id="sTurnOrder" class="screen">
+  <div style="text-align:center;margin-bottom:22px;">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:46px;color:var(--ac);letter-spacing:3px;" id="turnOrderTitle">GAME START!</div>
+    <div style="color:var(--mu);font-size:13px;font-weight:700;margin-top:4px;">Turn order for this game</div>
+  </div>
+  <div class="card" style="max-width:400px;">
+    <div id="turnOrderList"></div>
+  </div>
+  <div id="turnOrderAction" style="margin-top:10px;"></div>
+</div>
+
+<!-- GUESSER SCREEN -->
+<div id="sGuesser" class="screen">
+  <div class="spec-banner">🎯 YOU ARE GUESSING — listen to your teammates!</div>
+  <div class="play-top">
+    <div class="play-name" id="gName"></div>
+    <div class="timer-wrap">
+      <svg width="78" height="78" viewBox="0 0 78 78">
+        <circle class="timer-track" cx="39" cy="39" r="33"/>
+        <circle class="timer-prog" id="gTimerProg" cx="39" cy="39" r="33" stroke-dasharray="207.3" stroke-dashoffset="0"/>
+      </svg>
+      <div class="timer-inner"><div class="timer-n" id="gTimerN">60</div><div class="timer-l">SEC</div></div>
+    </div>
+    <div class="score-box">Score: <span id="gScore">0</span></div>
+  </div>
+  <div class="word-area">
+    <div style="font-size:48px;margin-bottom:10px;">🙈</div>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--mu);letter-spacing:2px;">LISTEN TO YOUR TEAM!</div>
+    <div style="color:var(--mu);font-size:13px;font-weight:600;margin-top:6px;">Hit the buttons when you hear the answer</div>
+  </div>
+  <div class="play-btns">
+    <button class="btn btn-no" onclick="guesserAction('skip')">❌ SKIP</button>
+    <button class="btn btn-ok" onclick="guesserAction('got')">✅ GOT IT</button>
+  </div>
+</div>
+
+<!-- DESCRIBER SCREEN -->
+<div id="sDescriber" class="screen">
+  <div id="liveStrip"></div>
+  <div class="spec-banner" id="descrBanner">👀 DESCRIBE THIS WORD!</div>
+  <div class="play-top">
+    <div class="play-name" id="dName"></div>
+    <div class="timer-wrap">
+      <svg width="78" height="78" viewBox="0 0 78 78">
+        <circle class="timer-track" cx="39" cy="39" r="33"/>
+        <circle class="timer-prog" id="dTimerProg" cx="39" cy="39" r="33" stroke-dasharray="207.3" stroke-dashoffset="0"/>
+      </svg>
+      <div class="timer-inner"><div class="timer-n" id="dTimerN">60</div><div class="timer-l">SEC</div></div>
+    </div>
+    <div class="score-box">Score: <span id="dScore">0</span></div>
+  </div>
+  <div class="word-area">
+    <div class="word-card" id="wordCard">
+      <div class="word-cat" id="dCat"></div>
+      <div class="word-big" id="dWord"></div>
+    </div>
+  </div>
+</div>
+
+<!-- RECAP -->
+<div id="sRecap" class="screen">
+  <div style="text-align:center;margin-bottom:18px;">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:46px;color:var(--ac);letter-spacing:3px;">📋 RECAP</div>
+    <div style="color:var(--mu);font-size:13px;font-weight:700;margin-top:4px;" id="recapLabel"></div>
+  </div>
+  <div class="recap-stats">
+    <div class="rstat g"><div class="n" id="recapGot">0</div><div class="l">Got It</div></div>
+    <div class="rstat r"><div class="n" id="recapSkip">0</div><div class="l">Skipped</div></div>
+  </div>
+  <div class="recap-list" id="recapList"></div>
+  <button class="btn btn-p" id="recapBtn" onclick="recapNext()" style="display:none;">NEXT →</button>
+  <p style="color:var(--mu);font-size:13px;font-weight:700;margin-top:8px;" id="recapWait" style="display:none;"><span class="sp"></span>Waiting for host<span class="dots"></span></p>
+</div>
+
+<!-- FINAL -->
+<div id="sFinal" class="screen">
+  <div class="crown-wrap"><div class="crown-emoji" id="crownEmoji">👑</div></div>
+  <div class="winner-name" id="winnerName"></div>
+  <div class="winner-pts" id="winnerPts" style="margin-bottom:20px;"></div>
+  <div style="width:100%;max-width:460px;" id="finalBoard"></div>
+  <div style="display:flex;gap:12px;margin-top:16px;flex-wrap:wrap;justify-content:center;">
+    <button class="btn btn-p" id="playAgainBtn" onclick="playAgainSameLobby()" style="font-size:16px;padding:14px 32px;">🔄 PLAY AGAIN</button>
+    <button class="btn" onclick="leaveGame()" style="font-size:14px;padding:14px 24px;background:rgba(255,255,255,.07);color:var(--mu);border:1px solid var(--br);">🚪 LEAVE</button>
+  </div>
+  <p style="color:var(--mu);font-size:12px;font-weight:700;margin-top:10px;" id="playAgainWait" style="display:none;"><span class="sp"></span>Waiting for host to restart<span class="dots"></span></p>
+</div>
+
+<script src="https://cdn.pubnub.com/sdk/javascript/pubnub.7.4.5.min.js"></script>
+<script>
+if(typeof PubNub==='undefined'){
+  document.write('<script src="https://cdn.jsdelivr.net/npm/pubnub@7.4.5/dist/web/pubnub.min.js"><\/script>');
+}
+</script>
+<script>
+// ─────────────────────────────────────────────
+// WORD BANK
+// ─────────────────────────────────────────────
+var CATS = {
+  "Movies":["The Dark Knight","Titanic","Inception","Avengers: Endgame","The Lion King","Frozen","Interstellar","The Godfather","Jurassic Park","Finding Nemo","Spider-Man","Black Panther","Harry Potter","The Matrix","Shrek","Toy Story","Fast & Furious","Oppenheimer","Dune","Moana","Encanto","Coco","Up","WALL-E","Parasite","Joker","Doctor Strange","Thor","Iron Man","Captain America","Aquaman","Transformers","Top Gun: Maverick","John Wick","Deadpool","Wonder Woman","Venom","The Batman","Tenet","The Hunger Games","Twilight","Avengers: Infinity War","No Way Home","Black Adam","Barbie","Wonka","Batman","The Joker","Thanos","Darth Vader","Hermione Granger","Jack Sparrow","Tony Stark","Voldemort","Katniss Everdeen","Gollum","Leonardo DiCaprio","Christopher Nolan","Steven Spielberg","Morgan Freeman","Tom Hanks","Margot Robbie","Timothee Chalamet","I am Iron Man","You shall not pass","Why so serious?","To infinity and beyond","Just keep swimming","Oscar Award","Post-credits scene","Plot Twist","Sequel","Animated Film","Villain","Superhero","Cameo","Reboot","Box Office Record","Mission Impossible","The Notebook","Home Alone","Forrest Gump","Gladiator","The Revenant","Get Out","Knives Out","Everything Everywhere All at Once","Spirited Away","Your Name","The Grand Budapest Hotel","Inception","Whiplash","A Quiet Place","Bird Box","Us","Hereditary","Midsommar"],
+  "TV Shows":["Stranger Things","Breaking Bad","Game of Thrones","The Office","Friends","Squid Game","Wednesday","Euphoria","Cobra Kai","The Crown","Ozark","Yellowstone","The Witcher","Money Heist","Prison Break","Suits","Grey's Anatomy","The Walking Dead","Brooklyn Nine-Nine","Peaky Blinders","Riverdale","Outer Banks","Seinfeld","How I Met Your Mother","Avatar: The Last Airbender","Narcos","Loki","The Mandalorian","House of the Dragon","The Last of Us","Succession","White Lotus","The Bear","Severance","Invincible","The Boys","Andor","Ted Lasso","Abbott Elementary","Dexter","Lost","Dark","Westworld","Black Mirror","Schitt's Creek","Walter White","Tyrion Lannister","Michael Scott","Eleven","Daenerys Targaryen","Tony Soprano","Sherlock Holmes","Bart Simpson","Homer Simpson","Jesse Pinkman","Season Finale","Cliffhanger","Spin-off","Pilot Episode","Binge-watching","Cancelled Show","Crossover Episode","Netflix","HBO","Disney+","Amazon Prime","Apple TV+","Better Call Saul","Fargo","True Detective","Mindhunter","Hannibal","Chernobyl","Band of Brothers","The Wire","Sopranos","Justified","Rectify","Fleabag","Atlanta","Barry","What We Do in the Shadows","Reservation Dogs","The Righteous Gemstones","Silicon Valley","Veep","Curb Your Enthusiasm","Entourage","Ballers","Billions","Homeland","24","Prison Break","Power"],
+  "Famous People":["Elon Musk","LeBron James","Taylor Swift","Cristiano Ronaldo","Lionel Messi","Beyonce","Drake","Kanye West","Kim Kardashian","Barack Obama","Rihanna","Dwayne Johnson","Will Smith","Oprah Winfrey","Michael Jackson","Billie Eilish","Ariana Grande","Justin Bieber","Cardi B","Nicki Minaj","Bad Bunny","J. Cole","Travis Scott","The Weeknd","Post Malone","Eminem","Jay-Z","Kendrick Lamar","21 Savage","Lil Baby","Usain Bolt","Serena Williams","Tiger Woods","Floyd Mayweather","Conor McGregor","Naomi Osaka","Simone Biles","Michael Phelps","Roger Federer","Novak Djokovic","Zendaya","Tom Holland","Chris Hemsworth","Ryan Reynolds","Kevin Hart","Chris Rock","Eddie Murphy","Dave Chappelle","Adam Sandler","Jim Carrey","Jeff Bezos","Mark Zuckerberg","Bill Gates","Steve Jobs","Warren Buffett","Donald Trump","Joe Biden","Kylie Jenner","MrBeast","KSI","Logan Paul","Jake Paul","Charli D'Amelio","IShowSpeed","Kai Cenat","Ninja","Pokimane","Muhammad Ali","Michael Jordan","Kobe Bryant","Tupac Shakur","Bob Marley","Elvis Presley","Marilyn Monroe","Albert Einstein","Nelson Mandela","Martin Luther King Jr.","Cristiano Ronaldo","Malala Yousafzai","Greta Thunberg","Stephen Hawking","Elon Musk","Jeff Bezos","Dalai Lama","Pope Francis","Vladimir Putin","Xi Jinping","Angela Merkel","Jacinda Ardern","Volodymyr Zelensky","Narendra Modi","Emmanuel Macron","Recep Tayyip Erdogan","Mohammed bin Salman","Kim Jong-un","Fidel Castro"],
+  "Brands":["Nike","Apple","McDonald's","Netflix","Google","Amazon","Tesla","YouTube","Instagram","Snapchat","TikTok","Adidas","Louis Vuitton","Supreme","Gucci","Jordan","Starbucks","Chick-fil-A","PlayStation","Xbox","LEGO","Disney","Spotify","Twitter / X","Samsung","Microsoft","Coca-Cola","Pepsi","Ferrari","Lamborghini","Balenciaga","Off-White","Versace","Prada","Rolex","Porsche","Bugatti","Rolls-Royce","Bentley","Audi","Chanel","Dior","Fendi","Burberry","Ralph Lauren","Tommy Hilfiger","Calvin Klein","Zara","H&M","IKEA","Wendy's","Taco Bell","Chipotle","Subway","Burger King","KFC","Domino's","Pizza Hut","Dunkin'","Popeyes","Red Bull","Monster Energy","Gatorade","Doritos","Cheetos","Pringles","Oreo","Nutella","Uber","Lyft","Airbnb","PayPal","Visa","Discord","Twitch","Reebok","New Balance","Vans","Converse","Under Armour","Puma","Hugo Boss","Armani","Cartier","Tiffany & Co.","Swarovski","Hermès","Saint Laurent","Givenchy","Valentino","Moncler","Stone Island","Palace","Bape","Kith"],
+  "Famous Places":["Eiffel Tower","Great Wall of China","Statue of Liberty","Burj Khalifa","Big Ben","Machu Picchu","Colosseum","Sydney Opera House","Times Square","Niagara Falls","Mount Everest","Grand Canyon","Louvre Museum","Buckingham Palace","Sagrada Familia","Taj Mahal","Stonehenge","Pyramids of Giza","Christ the Redeemer","Santorini","Mecca","Jerusalem","Tokyo Tower","The White House","Area 51","Las Vegas Strip","Hollywood Sign","Amazon Rainforest","Sahara Desert","Antarctica","Angkor Wat","Petra","Chichen Itza","Easter Island","Mount Fuji","Victoria Falls","Dead Sea","Amazon River","Nile River","Disney World","Universal Studios","Madison Square Garden","Wembley Stadium","Old Trafford","Camp Nou","Anfield","Santiago Bernabeu","MetLife Stadium","SoFi Stadium","Dubai","Paris","Tokyo","New York City","London","Rome","Barcelona","Cairo","Sydney","Los Angeles","Harvard University","MIT","Oxford University","NASA","Pentagon","Vatican City","Alcatraz","Yellowstone","Maldives","Bali","Cancun","Ibiza","Monaco","Amalfi Coast","Bora Bora","Cappadocia","Patagonia","Death Valley","Niagara Falls","Serengeti","Galapagos Islands","Machu Picchu","Angkor Wat","Chernobyl","Pompeii","Auschwitz","Ground Zero","Area 51","The Pentagon","Silicon Valley","Wall Street","Rodeo Drive","Sunset Boulevard","Times Square","Bourbon Street","The Vegas Strip"],
+  "Islam":["Prophet Muhammad (PBUH)","Quran","Kaaba","Ramadan","Eid al-Fitr","Hajj","Masjid al-Haram","Medina","Five Pillars","Salah","Zakat","Shahada","Sawm","Prophet Ibrahim","Prophet Musa","Prophet Isa","Angel Jibril","Zamzam Well","Al-Aqsa Mosque","Day of Judgment","Jannah","Jahannam","Laylat al-Qadr","Surah Al-Fatiha","Bismillah","Allahu Akbar","Prophet Nuh","Prophet Yusuf","Azan","Wudu","Eid al-Adha","Qibla","Minaret","Imam","Masjid","Sunnah","Hadith","Tawheed","Tawbah","Prophet Adam","Prophet Dawud","Prophet Sulayman","Prophet Idris","Prophet Yunus","Prophet Hud","Prophet Salih","Angel Mikail","Angel Israfil","Isra and Miraj","Battle of Badr","Battle of Uhud","Hijrah","Makkah","Taraweeh","Tahajjud","Dua","Dhikr","SubhanAllah","Alhamdulillah","Astaghfirullah","Inshallah","Mashallah","JazakAllahu Khayran","Seerah","Ummah","Fiqh","Halal","Haram","Taqwa","Salatul Fajr","Salatul Dhuhr","Salatul Asr","Salatul Maghrib","Salatul Isha","Masjid al-Nabawi","Mount Arafat","Muzdalifah","Mina","Safa and Marwa","Sirat al-Mustaqim","Barzakh","Mizan","Hellfire","Paradise","Surah Al-Baqarah","Surah Yasin","Surah Al-Ikhlas","Surah Al-Kahf","Ayat al-Kursi","99 Names of Allah","Ar-Rahman","Al-Ghaffar","Al-Malik","Al-Quddus"],
+  "Anime":["Naruto Uzumaki","Sasuke Uchiha","Goku","Vegeta","Monkey D. Luffy","Roronoa Zoro","Ichigo Kurosaki","Eren Yeager","Levi Ackerman","Itachi Uchiha","Kakashi Hatake","Saitama","Gojo Satoru","Tanjiro Kamado","Nezuko Kamado","Zenitsu Agatsuma","Inosuke Hashibira","Mikasa Ackerman","Light Yagami","L Lawliet","Edward Elric","Roy Mustang","Killua Zoldyck","Gon Freecss","Shoto Todoroki","Izuku Midoriya","Katsuki Bakugo","Spike Spiegel","Jotaro Kujo","Ken Kaneki","Naruto","One Piece","Dragon Ball Z","Attack on Titan","Demon Slayer","Jujutsu Kaisen","My Hero Academia","Death Note","Fullmetal Alchemist","Hunter x Hunter","Bleach","Sword Art Online","Tokyo Ghoul","Vinland Saga","Chainsaw Man","Spy x Family","Blue Lock","Haikyuu!!","Black Clover","Rasengan","Kamehameha","Gum-Gum Fruit","Sharingan","Rinnegan","One For All","Six Eyes","Bankai","Nen","Cursed Energy","Akatsuki","Soul Society","Survey Corps","Demon Slayer Corps","UA High School","Studio Ghibli","Spirited Away","Your Name","Anime Opening","Filler Arc","Power-up","Final Boss","Isekai","Neon Genesis Evangelion","Cowboy Bebop","Steins Gate","Code Geass","Re Zero","Sword Art Online","No Game No Life","Overlord","That Time I Got Reincarnated as a Slime","Mushoku Tensei","Jobless Reincarnation","Mob Psycho 100","One Punch Man","Trigun","Gurren Lagann","Fairy Tail","Toriko","Magi","Seven Deadly Sins"],
+  "NFL":["Patrick Mahomes","Travis Kelce","Josh Allen","Lamar Jackson","Joe Burrow","Justin Jefferson","Tyreek Hill","Davante Adams","Aaron Donald","Micah Parsons","Tom Brady","Aaron Rodgers","Jalen Hurts","Brock Purdy","CJ Stroud","Christian McCaffrey","Derrick Henry","Stefon Diggs","Saquon Barkley","Justin Herbert","Dak Prescott","Jerry Rice","Emmitt Smith","Barry Sanders","Lawrence Taylor","Peyton Manning","Joe Montana","Walter Payton","Jim Brown","Deion Sanders","Kansas City Chiefs","San Francisco 49ers","Dallas Cowboys","New England Patriots","Green Bay Packers","Philadelphia Eagles","Baltimore Ravens","Buffalo Bills","Miami Dolphins","Las Vegas Raiders","Super Bowl","Hail Mary","Touchdown","Field Goal","Interception","Sack","Two-Point Conversion","Onside Kick","Lombardi Trophy","NFL Draft","Combine","MVP Award","Pro Bowl","Hall of Fame","Monday Night Football","Sunday Night Football","SoFi Stadium","Arrowhead Stadium","Lambeau Field","MetLife Stadium","AT&T Stadium","Quarterback","Running Back","Wide Receiver","Tight End","Linebacker","Cornerback","Safety","Offensive Line","Defensive End","Blitz","Red Zone","Punt","Kickoff Return","Shotgun Formation","Hurry Up Offense","Two Minute Drill","Coin Toss","Challenge Flag","Replay Review","Roughing the Passer","Pass Interference","Holding","False Start","Illegal Motion","Helmet to Helmet","Targeting","Unnecessary Roughness","Unsportsmanlike Conduct","Personal Foul","Delay of Game"],
+  "NBA":["LeBron James","Stephen Curry","Kevin Durant","Giannis Antetokounmpo","Luka Doncic","Nikola Jokic","Joel Embiid","Jayson Tatum","Zion Williamson","Anthony Edwards","Ja Morant","Devin Booker","Damian Lillard","Kawhi Leonard","Jimmy Butler","Kyrie Irving","James Harden","Klay Thompson","Anthony Davis","Trae Young","Victor Wembanyama","Michael Jordan","Kobe Bryant","Shaquille O'Neal","Magic Johnson","Larry Bird","Charles Barkley","Hakeem Olajuwon","Patrick Ewing","Scottie Pippen","Los Angeles Lakers","Golden State Warriors","Boston Celtics","Miami Heat","Chicago Bulls","San Antonio Spurs","Brooklyn Nets","Milwaukee Bucks","Phoenix Suns","Denver Nuggets","NBA Finals","Larry O'Brien Trophy","Slam Dunk Contest","Three-Point Contest","All-Star Game","NBA Draft","Lottery Pick","Trade Deadline","Free Agency","Max Contract","Ankle Breaker","Poster Dunk","Buzzer Beater","Triple Double","Clutch Shot","Fadeaway","Euro Step","Dream Shake","Skyhook","Madison Square Garden","Chase Center","TD Garden","United Center","Fiserv Forum","Point Guard","Shooting Guard","Small Forward","Power Forward","Center","Pick and Roll","Fast Break","Zone Defense","Flagrant Foul","Ejection","Technical Foul","Intentional Foul","Hack a Shaq","Small Ball","Pace and Space","Load Management","Two-Way Contract","Rookie Scale","Bird Rights","Sign and Trade","Stretch Provision","Luxury Tax","Salary Cap","Hard Cap","Soft Cap","Mid-Level Exception","Minimum Contract"],
+  "Soccer":["Lionel Messi","Cristiano Ronaldo","Pele","Diego Maradona","Ronaldinho","Zinedine Zidane","Ronaldo Nazario","Thierry Henry","David Beckham","Paolo Maldini","Roberto Carlos","Andres Iniesta","Xavi Hernandez","Luka Modric","Gianluigi Buffon","Cafu","Rivaldo","Francesco Totti","Steven Gerrard","Frank Lampard","Patrick Vieira","Didier Drogba","Fernando Torres","Wayne Rooney","Zlatan Ibrahimovic","Gareth Bale","Arjen Robben","Franck Ribery","Ruud van Nistelrooy","Raul","Samuel Etoo","Fabio Cannavaro","Roberto Baggio","N Golo Kante","Toni Kroos","Thomas Muller","Robert Lewandowski","Manuel Neuer","Sergio Ramos","Karim Benzema","Sadio Mane","Roberto Firmino","Kylian Mbappe","Erling Haaland","Vinicius Jr","Jude Bellingham","Lamine Yamal","Pedri","Rodri","Mohamed Salah","Kevin De Bruyne","Harry Kane","Neymar Jr","Bukayo Saka","Phil Foden","Gavi","Fede Valverde","Eduardo Camavinga","Aurelien Tchouameni","Arda Guler","Lautaro Martinez","Marcus Thuram","Khvicha Kvaratskhelia","Victor Osimhen","Rafael Leao","Theo Hernandez","Virgil van Dijk","Thibaut Courtois","Gianluigi Donnarumma","Alisson Becker","Ansu Fati","Ferran Torres","Dani Olmo","Fermin Lopez","Pau Cubarsi","Alejandro Balde","Raphinha","Eric Garcia","Frenkie de Jong","Endrick","Brahim Diaz","Lucas Vazquez","Dani Carvajal","Antonio Rudiger","Alvaro Morata","Giuliano Simeone","Alexander Sorloth","Ayoze Perez","Mikel Merino","Cole Palmer","Eberechi Eze","Pedro Neto","Noni Madueke","Malo Gusto","Marc Guehi","Dean Henderson","Adam Wharton","Ismaila Sarr","Matheus Franca","Jarrod Bowen","Lucas Paqueta","Mohammed Kudus","Crysencio Summerville","Willy Gnonto","Patrick Bamford","Jaidon Anthony","Lewis Hall","Joe Willock","Harvey Barnes","Alexander Isak","Anthony Gordon","Bruno Guimaraes","Jacob Murphy","James Maddison","Dejan Kulusevski","Richarlison","Dominic Solanke","Ilkay Gundogan","Bernardo Silva","Jack Grealish","Marcus Rashford","Alejandro Garnacho","Rasmus Hojlund","Kobbie Mainoo","Bruno Fernandes","Scott McTominay","Ollie Watkins","Leon Bailey","Moussa Diaby","Morgan Rogers","Emile Smith Rowe","Raheem Sterling","Nicolas Jackson","Christopher Nkunku","Romeo Lavia","Moises Caicedo","Enzo Fernandez","Mykhaylo Mudryk","Declan Rice","Martin Odegaard","Jurrien Timber","Kai Havertz","Gabriel Martinelli","Leandro Trossard","William Saliba","Ben White","Gabriel Magalhaes","David Raya","Florian Wirtz","Granit Xhaka","Jonas Hofmann","Alejandro Grimaldo","Jonathan Tah","Jamal Musiala","Leroy Sane","Serge Gnabry","Kingsley Coman","Min-jae Kim","Alphonso Davies","Joshua Kimmich","Konrad Laimer","Leon Goretzka","Karim Adeyemi","Jamie Gittens","Serhou Guirassy","Marcel Sabitzer","Gregor Kobel","Maximilian Beier","Tom Bischof","Noah Atubolu","Luca Netz","Marius Wolf","Nicolo Barella","Federico Chiesa","Ademola Lookman","Gianluca Scamacca","Teun Koopmeiners","Mateo Retegui","Boulaye Dia","Tijjani Noslin","Loum Tchaouna","Kenan Yildiz","Dusan Vlahovic","Weston McKennie","Federico Gatti","Gleison Bremer","Paulo Dybala","Romelu Lukaku","Lorenzo Pellegrini","Edoardo Bove","Sandi Lovric","Ousmane Dembele","Bradley Barcola","Desire Doue","Warren Zaire-Emery","Fabian Ruiz","Vitinha","Joao Neves","Khephren Thuram","Amine Gouiri","Jonathan Rowe","Mason Greenwood","Elye Wahi","Valentin Carboni","Neal Maupay","Rayan Cherki","Facundo Torres","Rodrigo Bentancur","Darwin Nunez","Luis Diaz","Alexis Mac Allister","Dominik Szoboszlai","Ryan Gravenberch","Trent Alexander-Arnold","Andrew Robertson","Ibrahima Konate","Cody Gakpo","Xavi Simons","Brian Brobbey","Joshua Zirkzee","Donyell Malen","Ndiaye Iliman","Malick Thiaw","Devyne Rensch","Jorrel Hato","El Chadaille Bitshiabu","Castello Lukeba","Maxence Caqueret","Nathanael Mbuku","Arnau Tenas","Pau Lopez","Alou Diarra","Ibrahim Sangare","Opi Okafor","Real Madrid","Barcelona","Manchester City","Manchester United","Liverpool","Bayern Munich","PSG","Juventus","Chelsea","Arsenal","Atletico Madrid","Inter Milan","AC Milan","Napoli","Borussia Dortmund","Bayer Leverkusen","FIFA World Cup","UEFA Champions League","Copa America","Euro Cup","Premier League","La Liga","Serie A","Bundesliga","Ligue 1","MLS","Ballon d Or","Golden Boot","Champions League Trophy","World Cup Trophy","El Clasico","Hat Trick","Bicycle Kick","Free Kick","Penalty Shootout","Offside Trap","Red Card","Yellow Card","Extra Time","VAR","Header","Corner Kick","Injury Time","Camp Nou","Anfield","Old Trafford","Santiago Bernabeu","Wembley","San Siro","Allianz Arena","Stamford Bridge","Etihad Stadium","Tiki-Taka","Gegenpressing","False Nine","Sweeper Keeper","Inverted Winger","High Press","Counter Attack","Set Piece","Nutmeg","Rabona"],
+  "Comic/Manga Characters":["Spider-Man","Batman","Superman","Iron Man","Captain America","Wolverine","Black Panther","Wonder Woman","The Joker","Thanos","Naruto Uzumaki","Sasuke Uchiha","Goku","Vegeta","Monkey D. Luffy","Zoro","Ichigo Kurosaki","Edward Elric","Tanjiro Kamado","Saitama","Gojo Satoru","Izuku Midoriya","Katsuki Bakugo","Killua Zoldyck","Light Yagami","Lelouch vi Britannia","Ken Kaneki","Eren Yeager","Levi Ackerman","Mikasa Ackerman","Thor","Hulk","Black Widow","Hawkeye","Ant-Man","Doctor Strange","Scarlet Witch","Vision","Shang-Chi","Moon Knight","Deadpool","Venom","Carnage","Green Goblin","Doctor Octopus","Magneto","Professor X","Cyclops","Storm","Jean Grey","Lex Luthor","The Flash","Aquaman","Green Lantern","Cyborg","Nightwing","Harley Quinn","Catwoman","Bane","Two-Face","Roronoa Zoro","Nami","Usopp","Sanji","Chopper","Robin","Franky","Brook","Jinbe","Boa Hancock","All Might","Endeavor","Himiko Toga","Dabi","Shigaraki","Overhaul","Meruem","Hisoka","Netero","Ging Freecss","Kurapika","Leorio","Chrollo Lucilfer","Illumi Zoldyck","Feitan","Nobunaga","Machi","Pakunoda","Shalnark"]
+};
+var CAT_NAMES = Object.keys(CATS);
+var EMOJIS = ['😎','🔥','👑','🐐','💀','🤩','🫡','🐉','⚡','🦁','🐺','🦊','🎯','💪','🕹️','🌙','🌊','🎭','🚀','🍀'];
+
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
+var myName='', myAvatar=EMOJIS[0], isHost=false, code='', chan='';
+var pn=null;
+// Game state (host is authoritative)
+var gs=null;
+// Local round tracking
+var roundWords=[], wordIdx=0, roundScore=0, roundLog=[], timeLeft=60, timerInterval=null, amGuesser=false;
+var seenWords=new Set(); // tracks words shown across all rounds
+
+// ─────────────────────────────────────────────
+// AUDIO
+// ─────────────────────────────────────────────
+var _ac=null;
+function ac(){if(!_ac)_ac=new(window.AudioContext||window.webkitAudioContext)();return _ac;}
+function tone(f,d,t,v){try{var c=ac(),o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type=t||'sine';o.frequency.value=f;g.gain.setValueAtTime(v||.22,c.currentTime);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+d);o.start();o.stop(c.currentTime+d);}catch(e){}}
+function sfxOK(){tone(660,.07,'sine',.2);setTimeout(function(){tone(880,.18,'sine',.17);},70);}
+function sfxNo(){tone(200,.12,'sawtooth',.17);setTimeout(function(){tone(150,.2,'sawtooth',.12);},110);}
+function sfxTick(){tone(440,.04,'square',.07);}
+
+// ─────────────────────────────────────────────
+// CONFETTI
+// ─────────────────────────────────────────────
+function confetti(){
+  var cv=document.getElementById('confettiCanvas'),ctx=cv.getContext('2d');
+  cv.width=window.innerWidth;cv.height=window.innerHeight;
+  var p=Array.from({length:150},function(){return{x:Math.random()*cv.width,y:Math.random()*cv.height-cv.height,r:Math.random()*7+3,c:['#f5c842','#ff5e62','#43e8a0','#a78bfa','#60a5fa','#fb923c'][Math.floor(Math.random()*6)],t:Math.random()*10-10,ts:Math.random()*.1+.05,s:Math.random()*3+1.5};});
+  var ang=0,fr,done=false;
+  (function draw(){ctx.clearRect(0,0,cv.width,cv.height);ang+=.01;p.forEach(function(x){x.t+=x.ts;x.y+=x.s;x.x+=Math.sin(ang)*1.2;ctx.beginPath();ctx.lineWidth=x.r;ctx.strokeStyle=x.c;ctx.moveTo(x.x+x.t+x.r/2,x.y);ctx.lineTo(x.x+x.t,x.y+x.t+x.r/2);ctx.stroke();});if(!done)fr=requestAnimationFrame(draw);})();
+  setTimeout(function(){done=true;cancelAnimationFrame(fr);ctx.clearRect(0,0,cv.width,cv.height);},4000);
+}
+
+// ─────────────────────────────────────────────
+// AVATAR PICKER
+// ─────────────────────────────────────────────
+function initAvatar(){
+  var row=document.getElementById('avatarPicker');row.innerHTML='';
+  EMOJIS.forEach(function(e){
+    var d=document.createElement('div');d.className='emo-opt'+(e===myAvatar?' sel':'');d.textContent=e;
+    d.onclick=function(){myAvatar=e;initAvatar();};row.appendChild(d);
+  });
+}
+
+// ─────────────────────────────────────────────
+// PUBNUB
+// ─────────────────────────────────────────────
+function initPN(onReady){
+  pn=new PubNub({publishKey:'demo',subscribeKey:'demo',uuid:myName+'_'+Date.now()});
+  pn.addListener({message:function(evt){if(evt.channel===chan)onMsg(evt.message);}});
+  pn.subscribe({channels:[chan]});
+  setTimeout(onReady,800);
+}
+function pub(type,data){if(pn)pn.publish({channel:chan,message:{type:type,data:data}});}
+
+// ─────────────────────────────────────────────
+// HOST
+// ─────────────────────────────────────────────
+function hostGame(){
+  myName=document.getElementById('myName').value.trim();
+  if(!myName){document.getElementById('landErr').textContent='Enter your name first!';return;}
+  isHost=true;
+  code=Math.random().toString(36).slice(2,6).toUpperCase();
+  chan='guessup_'+code;
+  gs={phase:'lobby',players:[{name:myName,avatar:myAvatar}],scores:{},selectedCats:CAT_NAMES.slice(),currentPlayerIndex:0};
+  gs.scores[myName]=0;
+  document.getElementById('lobbyCode').textContent=code;
+  initPN(function(){
+    renderLobbyCats();renderLobbyPlayers();
+    showScreen('sLobby');
+  });
+}
+
+// ─────────────────────────────────────────────
+// JOIN
+// ─────────────────────────────────────────────
+function joinGame(){
+  myName=document.getElementById('myName').value.trim();
+  var c=document.getElementById('joinCode').value.trim().toUpperCase();
+  if(!myName){document.getElementById('landErr').textContent='Enter your name first!';return;}
+  if(c.length!==4){document.getElementById('landErr').textContent='Enter a 4-letter code!';return;}
+  isHost=false;code=c;chan='guessup_'+c;
+  document.getElementById('waitCode').textContent=c;
+  initPN(function(){
+    showScreen('sWait');
+    pub('join',{name:myName,avatar:myAvatar});
+  });
+}
+
+// ─────────────────────────────────────────────
+// MESSAGE HANDLER
+// ─────────────────────────────────────────────
+function onMsg(msg){
+  var type=msg.type, data=msg.data;
+
+  if(type==='join'){
+    if(!isHost) return;
+    if(!gs.players.find(function(p){return p.name===data.name;})){
+      gs.players.push({name:data.name,avatar:data.avatar});
+      gs.scores[data.name]=0;
+    }
+    renderLobbyPlayers();
+    pub('state',gs);
+    return;
+  }
+
+  if(type==='state'){
+    if(isHost) return;
+    gs=data;
+    renderWaitPlayers();
+    return;
+  }
+
+  if(type==='game_start'){
+    // Everyone (host echo ignored since host already called showTurnOrder)
+    // Guests receive this and set up gs
+    if(!isHost){ gs=data; showTurnOrder(true); }
+    return;
+  }
+
+  if(type==='round_start'){
+    // Skip echo for the guesser — they already started
+    if(data.guesserName===myName) return;
+    // Sync gs from the message
+    gs.currentPlayerIndex=data.playerIndex;
+    gs.players=data.players;
+    gs.scores=data.scores;
+    gs.selectedCats=data.selectedCats;
+    // Build the same word list using the shared seed
+    roundWords=buildWordPool(data.seed);
+    wordIdx=0; roundScore=0; roundLog=[]; timeLeft=60;
+    amGuesser=false;
+    showCountdown(function(){startRoundUI();});
+    return;
+  }
+
+  if(type==='word_update'){
+    var prevIdx=wordIdx;
+    var prevLog=roundLog.length>0?roundLog[roundLog.length-1]:null;
+    wordIdx=data.wordIdx; roundScore=data.roundScore; roundLog=data.roundLog;
+    if(!amGuesser){
+      var lastResult=data.roundLog.length>0?data.roundLog[data.roundLog.length-1].result:null;
+      animateWord(lastResult||'skip',function(){updateDescriberWord();});
+      document.getElementById('dScore').textContent=roundScore;
+      updateLiveStrip();
+    }
+    return;
+  }
+
+  if(type==='timer_tick'){
+    timeLeft=data.t;
+    document.getElementById('gTimerN').textContent=timeLeft;
+    document.getElementById('dTimerN').textContent=timeLeft;
+    updateTimerRing(timeLeft/60);
+    if(timeLeft<=5) flashScreen();
+    if(timeLeft<=10) sfxTick();
+    return;
+  }
+
+  if(type==='round_end'){
+    clearInterval(timerInterval);
+    roundLog=data.roundLog; roundScore=data.roundScore;
+    gs.scores=data.scores;
+    showRecap();
+    return;
+  }
+
+  if(type==='next_turn'){
+    gs.currentPlayerIndex=data.playerIndex;
+    if(data.final){ showFinal(); } else { showTurnOrder(false); }
+    return;
+  }
+
+  if(type==='play_again'){
+    gs=data;
+    seenWords=new Set();
+    roundWords=[]; wordIdx=0; roundScore=0; roundLog=[]; amGuesser=false;
+    var w=document.getElementById('playAgainWait');
+    if(w) w.style.display='none';
+    showTurnOrder(true);
+    return;
+  }
+}
+
+// ─────────────────────────────────────────────
+// LOBBY
+// ─────────────────────────────────────────────
+function renderLobbyCats(){
+  var grid=document.getElementById('lobbyCats');grid.innerHTML='';
+  CAT_NAMES.forEach(function(cat){
+    var d=document.createElement('div');
+    d.className='cat-chip'+(gs.selectedCats.indexOf(cat)!==-1?' sel':'');
+    d.textContent=cat;
+    d.onclick=function(){
+      var i=gs.selectedCats.indexOf(cat);
+      if(i!==-1)gs.selectedCats.splice(i,1);else gs.selectedCats.push(cat);
+      renderLobbyCats();
+      pub('state',gs);
+    };
+    grid.appendChild(d);
+  });
+}
+
+function renderLobbyPlayers(){
+  var el=document.getElementById('lobbyPlayers');el.innerHTML='';
+  gs.players.forEach(function(p,i){
+    var d=document.createElement('div');d.className='player-lobby';
+    d.innerHTML='<span style="font-size:20px">'+p.avatar+'</span><span>'+p.name+'</span>'+(i===0?'<span class="host-tag">HOST</span>':'');
+    el.appendChild(d);
+  });
+  document.getElementById('lobbyCount').textContent='('+gs.players.length+')';
+}
+
+function renderWaitPlayers(){
+  var el=document.getElementById('waitPlayers');el.innerHTML='';
+  if(!gs||!gs.players)return;
+  gs.players.forEach(function(p,i){
+    var d=document.createElement('div');d.className='player-lobby';
+    d.innerHTML='<span style="font-size:20px">'+p.avatar+'</span><span>'+p.name+'</span>'+(i===0?'<span class="host-tag">HOST</span>':'');
+    el.appendChild(d);
+  });
+}
+
+// ─────────────────────────────────────────────
+// START GAME (HOST)
+// ─────────────────────────────────────────────
+function startGame(){
+  if(!isHost)return;
+  if(gs.players.length<2){document.getElementById('lobbyErr').textContent='Need at least 2 players!';return;}
+  if(gs.selectedCats.length===0){document.getElementById('lobbyCatErr').textContent='Pick at least one category!';return;}
+  // shuffle turn order
+  gs.players=gs.players.slice().sort(function(){return Math.random()-.5;});
+  gs.currentPlayerIndex=0;
+  gs.scores={};gs.players.forEach(function(p){gs.scores[p.name]=0;});
+  pub('game_start',gs); // guests receive this
+  showTurnOrder(true);  // host goes directly
+}
+
+// ─────────────────────────────────────────────
+// TURN ORDER SCREEN
+// ─────────────────────────────────────────────
+function showTurnOrder(isFirst){
+  var list=document.getElementById('turnOrderList');list.innerHTML='';
+  gs.players.forEach(function(p,i){
+    var d=document.createElement('div');
+    d.className='turn-item'+(i===gs.currentPlayerIndex?' cur':'');
+    d.innerHTML='<span style="color:var(--mu);font-size:11px;width:16px;">'+(i+1)+'</span><span style="font-size:18px">'+p.avatar+'</span><span>'+p.name+'</span>'+(i===gs.currentPlayerIndex?'<span style="margin-left:auto;font-size:11px;color:var(--ac);font-weight:900;">← NEXT</span>':'');
+    list.appendChild(d);
+  });
+  document.getElementById('turnOrderTitle').textContent=isFirst?'GAME START!':'NEXT UP';
+  var action=document.getElementById('turnOrderAction');
+  var cur=gs.players[gs.currentPlayerIndex];
+  if(cur.name===myName){
+    action.innerHTML='<button class="btn btn-p" style="font-size:17px;padding:15px 40px;" onclick="myTurnReady()">I\'M READY → START MY TURN</button>';
+  } else {
+    action.innerHTML='<p style="color:var(--mu);font-size:14px;font-weight:700;text-align:center;">Waiting for <strong style="color:var(--ac)">'+cur.avatar+' '+cur.name+'</strong> to start their turn<span class="dots"></span></p>';
+  }
+  showScreen('sTurnOrder');
+}
+
+// ─────────────────────────────────────────────
+// CURRENT PLAYER STARTS THEIR ROUND
+// ─────────────────────────────────────────────
+function buildWordPool(seed){
+  var pool=[];
+  gs.selectedCats.forEach(function(cat){
+    if(CATS[cat])CATS[cat].forEach(function(w){pool.push({word:w,cat:cat});});
+  });
+  // Seeded shuffle (mulberry32)
+  var s=seed>>>0;
+  function rand(){s+=0x6D2B79F5;var t=s;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296;}
+  for(var i=pool.length-1;i>0;i--){var j=Math.floor(rand()*(i+1));var t=pool[i];pool[i]=pool[j];pool[j]=t;}
+  // Filter out words already seen this game
+  var filtered=pool.filter(function(w){ return !seenWords.has(w.word); });
+  // If we filtered everything (unlikely but safe) fall back to full pool
+  return filtered.length>0 ? filtered : pool;
+}
+
+function myTurnReady(){
+  var seed=Math.floor(Math.random()*2147483647);
+  var guesserName=gs.players[gs.currentPlayerIndex].name;
+  // Send only the seed + tiny metadata — no word list!
+  pub('round_start',{playerIndex:gs.currentPlayerIndex,guesserName:guesserName,seed:seed,selectedCats:gs.selectedCats,players:gs.players,scores:gs.scores});
+  // Build words locally and start immediately
+  roundWords=buildWordPool(seed);
+  wordIdx=0;roundScore=0;roundLog=[];timeLeft=60;
+  amGuesser=true;
+  showCountdown(function(){startRoundUI();});
+}
+
+// ─────────────────────────────────────────────
+// ROUND UI
+// ─────────────────────────────────────────────
+
+// ── LIVE SCOREBOARD STRIP ──
+function updateLiveStrip(){
+  var strip=document.getElementById('liveStrip');
+  if(!strip||!gs||!gs.players) return;
+  strip.classList.add('show');
+  var sorted=gs.players.slice().sort(function(a,b){return (gs.scores[b.name]||0)-(gs.scores[a.name]||0);});
+  strip.innerHTML='';
+  sorted.forEach(function(p,i){
+    var pill=document.createElement('div');
+    pill.className='ls-pill'+(i===0?' ls-lead':'');
+    var roundPts = (p.name===gs.players[gs.currentPlayerIndex].name) ? roundScore : '';
+    pill.innerHTML='<span class="ls-avatar">'+p.avatar+'</span>'
+      +'<span class="ls-name">'+p.name+'</span>'
+      +'<span class="ls-pts">'+(gs.scores[p.name]||0)+'</span>'
+      +(roundPts?'<span class="ls-roundpts">+'+roundPts+'</span>':'');
+    strip.appendChild(pill);
+  });
+}
+
+function hideLiveStrip(){
+  var strip=document.getElementById('liveStrip');
+  if(strip) strip.classList.remove('show');
+}
+function startRoundUI(){
+  var cur=gs.players[gs.currentPlayerIndex];
+  clearInterval(timerInterval);
+  // reset timer ring
+  updateTimerRing(1);
+  if(amGuesser){
+    document.getElementById('gName').textContent=cur.avatar+' '+cur.name;
+    document.getElementById('gScore').textContent='0';
+    document.getElementById('gTimerN').textContent='60';
+    showScreen('sGuesser');
+    // guesser runs the timer
+    timeLeft=60;
+    timerInterval=setInterval(function(){
+      timeLeft--;
+      document.getElementById('gTimerN').textContent=timeLeft;
+      updateTimerRing(timeLeft/60);
+      pub('timer_tick',{t:timeLeft});
+      if(timeLeft<=5) flashScreen();
+      if(timeLeft<=10) sfxTick();
+      if(timeLeft<=0){clearInterval(timerInterval);endRound();}
+    },1000);
+  } else {
+    document.getElementById('descrBanner').textContent='👀 DESCRIBE THIS WORD TO '+cur.avatar+' '+cur.name+'!';
+    document.getElementById('dName').textContent=cur.avatar+' '+cur.name;
+    document.getElementById('dScore').textContent='0';
+    document.getElementById('dTimerN').textContent='60';
+    updateDescriberWord();
+    updateLiveStrip();
+    showScreen('sDescriber');
+  }
+}
+
+function updateDescriberWord(){
+  var card=document.getElementById('wordCard');
+  if(wordIdx<roundWords.length){
+    var word=roundWords[wordIdx].word, cat=roundWords[wordIdx].cat;
+    document.getElementById('dWord').textContent=word;
+    document.getElementById('dCat').textContent=cat;
+    if(card) card.setAttribute('data-cat', cat);
+  } else {
+    document.getElementById('dWord').textContent='All done!';
+    document.getElementById('dCat').textContent='';
+    if(card) card.removeAttribute('data-cat');
+  }
+}
+
+// ─────────────────────────────────────────────
+// GUESSER ACTIONS
+// ─────────────────────────────────────────────
+function guesserAction(type){
+  if(wordIdx>=roundWords.length)return;
+  var entry={word:roundWords[wordIdx].word,cat:roundWords[wordIdx].cat,result:type};
+  roundLog.push(entry);
+  if(type==='got'){roundScore++;sfxOK();document.getElementById('gScore').textContent=roundScore;}
+  else{sfxNo();}
+  wordIdx++;
+  pub('word_update',{wordIdx:wordIdx,roundScore:roundScore,roundLog:roundLog});
+  if(wordIdx>=roundWords.length){clearInterval(timerInterval);endRound();return;}
+  // animate word card on describer screens (describers see it)
+}
+
+function updateDescriberWordAnimated(type){
+  animateWord(type, function(){updateDescriberWord();});
+}
+
+// ─────────────────────────────────────────────
+// END ROUND
+// ─────────────────────────────────────────────
+function endRound(){
+  clearInterval(timerInterval);
+  // Mark any word that was showing when time ran out as seen
+  if(wordIdx<roundWords.length) seenWords.add(roundWords[wordIdx].word);
+  var cur=gs.players[gs.currentPlayerIndex];
+  gs.scores[cur.name]=(gs.scores[cur.name]||0)+roundScore;
+  pub('round_end',{roundLog:roundLog,roundScore:roundScore,scores:gs.scores});
+  showRecap();
+}
+
+// ─────────────────────────────────────────────
+// RECAP
+// ─────────────────────────────────────────────
+function showRecap(){
+  var cur=gs.players[gs.currentPlayerIndex];
+  // Show round summary overlay first, then recap
+  showRoundSummary(cur.name, roundScore, gs.scores, gs.players, function(){
+    _renderRecapScreen();
+  });
+}
+
+function _renderRecapScreen(){
+  var cur=gs.players[gs.currentPlayerIndex];
+  document.getElementById('recapLabel').textContent=cur.avatar+' '+cur.name+"'s round — "+roundScore+' point'+(roundScore!==1?'s':'');
+  document.getElementById('recapGot').textContent=roundLog.filter(function(r){return r.result==='got';}).length;
+  document.getElementById('recapSkip').textContent=roundLog.filter(function(r){return r.result==='skipped'||r.result==='skip';}).length;
+  var list=document.getElementById('recapList');list.innerHTML='';
+  roundLog.forEach(function(r){
+    var d=document.createElement('div');
+    d.className='recap-row '+(r.result==='got'?'got':'skp');
+    d.innerHTML='<span>'+(r.result==='got'?'✅':'❌')+'</span><span style="flex:1">'+r.word+'</span><span class="recap-cat">'+r.cat+'</span>';
+    list.appendChild(d);
+  });
+  var btn=document.getElementById('recapBtn');
+  var wait=document.getElementById('recapWait');
+  if(amGuesser){
+    btn.style.display='';
+    var isLast=gs.currentPlayerIndex>=gs.players.length-1;
+    btn.textContent=isLast?'SEE FINAL SCORES 🏆':'NEXT PLAYER →';
+    if(wait)wait.style.display='none';
+  } else {
+    btn.style.display='none';
+    if(wait)wait.style.display='';
+  }
+  showScreen('sRecap');
+}
+
+function recapNext(){
+  var nextIdx=gs.currentPlayerIndex+1;
+  var isFinal=nextIdx>=gs.players.length;
+  pub('next_turn',{playerIndex:nextIdx,final:isFinal});
+  if(isFinal){showFinal();}else{gs.currentPlayerIndex=nextIdx;showTurnOrder(false);}
+}
+
+// ─────────────────────────────────────────────
+// FINAL
+// ─────────────────────────────────────────────
+function showFinal(){
+  hideLiveStrip();
+  confetti();
+  var sorted=gs.players.slice().sort(function(a,b){return (gs.scores[b.name]||0)-(gs.scores[a.name]||0);});
+  var winner=sorted[0];
+  // Crown + winner name
+  var crownEl=document.getElementById('crownEmoji');
+  var nameEl=document.getElementById('winnerName');
+  var ptsEl=document.getElementById('winnerPts');
+  if(crownEl){ crownEl.style.animation='none'; void crownEl.offsetWidth; crownEl.style.animation='crownDrop .8s cubic-bezier(.34,1.56,.64,1) forwards'; }
+  if(nameEl) nameEl.textContent=winner.avatar+' '+winner.name+(winner.name===myName?' 🎉':'');
+  if(ptsEl) ptsEl.textContent=(gs.scores[winner.name]||0)+' points';
+  // Leaderboard with staggered animation
+  var board=document.getElementById('finalBoard');board.innerHTML='';
+  sorted.forEach(function(p,i){
+    var d=document.createElement('div');
+    d.className='lb-item'+(i===0?' win':'');
+    d.style.animationDelay=(i*0.1+0.3)+'s';
+    d.innerHTML='<div class="lb-rank">'+(i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1)+'</div><div style="font-size:20px">'+p.avatar+'</div><div class="lb-name">'+p.name+(p.name===myName?'<span class="you-tag">YOU</span>':'')+'</div><div class="lb-pts">'+(gs.scores[p.name]||0)+' pts</div>';
+    board.appendChild(d);
+  });
+  // Show/hide correct buttons based on role
+  var playBtn = document.getElementById('playAgainBtn');
+  var waitMsg = document.getElementById('playAgainWait');
+  if(isHost){ playBtn.style.display=''; if(waitMsg) waitMsg.style.display='none'; }
+  else { playBtn.style.display='none'; if(waitMsg) waitMsg.style.display=''; }
+  showScreen('sFinal');
+}
+
+// ─────────────────────────────────────────────
+// UTILS
+// ─────────────────────────────────────────────
+// ── BACKGROUND PARTICLES ──
+(function(){
+  var cv=document.getElementById('bgCanvas'),ctx=cv.getContext('2d');
+  function resize(){cv.width=window.innerWidth;cv.height=window.innerHeight;}
+  resize(); window.addEventListener('resize',resize);
+  var pts=Array.from({length:55},function(){return{
+    x:Math.random()*window.innerWidth, y:Math.random()*window.innerHeight,
+    vx:(Math.random()-.5)*.35, vy:(Math.random()-.5)*.35,
+    r:Math.random()*1.8+.4,
+    c:['rgba(245,200,66,','rgba(255,94,98,','rgba(67,232,160,'][Math.floor(Math.random()*3)]
+  };});
+  (function draw(){
+    ctx.clearRect(0,0,cv.width,cv.height);
+    pts.forEach(function(p){
+      p.x+=p.vx; p.y+=p.vy;
+      if(p.x<0)p.x=cv.width; if(p.x>cv.width)p.x=0;
+      if(p.y<0)p.y=cv.height; if(p.y>cv.height)p.y=0;
+      ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle=p.c+'.7)';ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  })();
+})();
+
+// ── SVG TIMER RING UPDATE ──
+var TIMER_CIRC=207.3;
+function updateTimerRing(pct){
+  var offset=TIMER_CIRC*(1-pct);
+  var color=pct>.5?'#43e8a0':pct>.2?'#f5c842':'#ff5e62';
+  ['gTimerProg','dTimerProg'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el){el.style.strokeDashoffset=offset;el.style.stroke=color;}
+  });
+  ['gTimerN','dTimerN'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el) el.style.color=color;
+  });
+}
+
+// ── COUNTDOWN THEN START ──
+function showCountdown(onDone){
+  var ov=document.getElementById('countdownOverlay');
+  var tx=document.getElementById('countdownText');
+  ov.style.opacity='1'; ov.classList.add('active');
+  var n=3;
+  tx.className='countdown-num'; tx.textContent=n;
+  var iv=setInterval(function(){
+    n--;
+    if(n>0){
+      tx.className='countdown-num'; tx.textContent=n;
+      // force reflow for re-animation
+      void tx.offsetWidth; tx.className='countdown-num'; tx.textContent=n;
+    } else if(n===0){
+      tx.className='countdown-go'; tx.textContent='GO!';
+    } else {
+      clearInterval(iv);
+      ov.style.opacity='0'; ov.classList.remove('active');
+      onDone();
+    }
+  },700);
+}
+
+// ── SCREEN TRANSITIONS ──
+function showScreen(id){
+  var current=document.querySelector('.screen.active');
+  var next=document.getElementById(id);
+  if(current && current!==next){
+    current.classList.add('slide-out');
+    setTimeout(function(){
+      current.classList.remove('active','slide-out');
+      next.classList.add('active','slide-in');
+      setTimeout(function(){next.classList.remove('slide-in');},400);
+    },220);
+  } else {
+    document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
+    next.classList.add('active','slide-in');
+    setTimeout(function(){next.classList.remove('slide-in');},400);
+  }
+  window.scrollTo(0,0);
+  updateBackBtn(id);
+}
+
+// ── SCREEN FLASH ──
+function flashScreen(){
+  var f=document.getElementById('flashOverlay');
+  f.classList.remove('flash'); void f.offsetWidth; f.classList.add('flash');
+}
+
+// ── WORD CARD ANIMATION ──
+function animateWord(type, cb){
+  var card=document.getElementById('wordCard');
+  if(!card){if(cb)cb();return;}
+  var cls=type==='got'?'w-exit-up':'w-exit-left';
+  card.style.animation='none'; void card.offsetWidth;
+  card.style.animation='';
+  card.classList.add(cls);
+  setTimeout(function(){
+    card.classList.remove(cls);
+    if(cb)cb();
+    card.style.animation='none'; void card.offsetWidth;
+    card.style.animation='cardFlipIn .35s cubic-bezier(.34,1.56,.64,1)';
+  },200);
+}
+
+// ─────────────────────────────────────────────
+// BACK BUTTON VISIBILITY
+// ─────────────────────────────────────────────
+var BACK_HIDDEN_SCREENS = ['sLand','sLobby','sWait'];
+function updateBackBtn(screenId){
+  var btn = document.getElementById('backBtn');
+  if(BACK_HIDDEN_SCREENS.indexOf(screenId) !== -1){ btn.classList.add('hidden'); }
+  else { btn.classList.remove('hidden'); }
+}
+
+// ─────────────────────────────────────────────
+// LEAVE GAME
+// ─────────────────────────────────────────────
+function leaveGameNoConfirm(){
+  if(pn){try{pn.unsubscribeAll();}catch(e){} pn=null;}
+  clearInterval(timerInterval);
+  myName=''; myAvatar=EMOJIS[0]; isHost=false; code=''; chan='';
+  gs=null; roundWords=[]; wordIdx=0; roundScore=0; roundLog=[];
+  seenWords=new Set(); timeLeft=60; timerInterval=null; amGuesser=false;
+  document.getElementById('myName').value='';
+  document.getElementById('joinCode').value='';
+  document.getElementById('landErr').textContent='';
+  document.getElementById('finalBoard').innerHTML='';
+  document.getElementById('backBtn').classList.add('hidden');
+  initAvatar();
+  showScreen('sLand');
+}
+
+function leaveGame(){
+  if(!confirm('Leave the game?')) return;
+  if(pn){try{pn.unsubscribeAll();}catch(e){} pn=null;}
+  clearInterval(timerInterval);
+  myName=''; myAvatar=EMOJIS[0]; isHost=false; code=''; chan='';
+  gs=null; roundWords=[]; wordIdx=0; roundScore=0; roundLog=[];
+  seenWords=new Set(); timeLeft=60; timerInterval=null; amGuesser=false;
+  document.getElementById('myName').value='';
+  document.getElementById('joinCode').value='';
+  document.getElementById('landErr').textContent='';
+  document.getElementById('finalBoard').innerHTML='';
+  document.getElementById('backBtn').classList.add('hidden');
+  initAvatar();
+  showScreen('sLand');
+}
+
+// ─────────────────────────────────────────────
+// ROUND SUMMARY (shows after each round)
+// ─────────────────────────────────────────────
+function showRoundSummary(playerName, score, scoresObj, players, onDone){
+  var sorted = players.slice().sort(function(a,b){ return (scoresObj[b.name]||0)-(scoresObj[a.name]||0); });
+  document.getElementById('rsSub').textContent = playerName + ' scored ' + score + ' point' + (score!==1?'s':'') + ' this round';
+  var rows = document.getElementById('rsRows'); rows.innerHTML='';
+  sorted.forEach(function(p,i){
+    var d=document.createElement('div'); d.className='rs-row'; d.style.animationDelay=(i*0.07)+'s';
+    var isJustPlayed = p.name===playerName;
+    d.innerHTML='<div class="rs-rank">'+(i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1)+'</div>'
+      +'<div style="font-size:18px">'+p.avatar+'</div>'
+      +'<div class="rs-name">'+p.name+(p.name===myName?'<span class="rs-you">YOU</span>':'')+'</div>'
+      +(isJustPlayed?'<div class="rs-delta">+'+score+'</div>':'')
+      +'<div class="rs-pts">'+(scoresObj[p.name]||0)+'</div>';
+    rows.appendChild(d);
+  });
+  var ov = document.getElementById('roundSummary');
+  ov.classList.add('show');
+  setTimeout(function(){ ov.classList.remove('show'); onDone(); }, 3200);
+}
+
+// ─────────────────────────────────────────────
+// PLAY AGAIN (same lobby — just reset scores & reshuffle)
+// ─────────────────────────────────────────────
+function playAgainSameLobby(){
+  if(!isHost) return;
+  seenWords=new Set(); // fresh game = fresh words
+  gs.players = gs.players.slice().sort(function(){ return Math.random()-.5; });
+  gs.currentPlayerIndex = 0;
+  gs.scores = {};
+  gs.players.forEach(function(p){ gs.scores[p.name]=0; });
+  pub('play_again', gs);
+  showTurnOrder(true);
+}
+
+// ─────────────────────────────────────────────
+// PLAY AGAIN (full leave — go back to landing)
+// ─────────────────────────────────────────────
+function playAgain(){
+  leaveGame();
+}
+
+// INIT
+initAvatar();
+</script>
+</body>
+</html>
